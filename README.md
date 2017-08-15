@@ -71,5 +71,5 @@ writeStatLoop 5 "stat.yaml" tv
 ~~~haskell
 import Control.Monad.STM
 
-atomically $ writeTVar tv (Kv [Metric "count": 1])
+atomically $ writeTVar tv (Kv [Metric "count" 1])
 ~~~
