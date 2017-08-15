@@ -4,7 +4,7 @@
 
 Статистика это набор KV-пар:
 
-~~~
+~~~haskell
 newtype Kv = Kv { unKv :: [Metric] }
 
 data Metric = Metric
