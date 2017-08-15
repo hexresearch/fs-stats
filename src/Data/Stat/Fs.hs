@@ -20,6 +20,9 @@ import Data.Time
 import Data.Yaml(ToJSON(..), object, (.=))
 import Data.Yaml.Pretty
 import GHC.Generics
+import GHC.IO.Handle
+import System.FilePath
+import System.IO.Temp
 
 import qualified Control.Immortal as Immortal
 import qualified Data.ByteString as B
@@ -61,12 +64,12 @@ instance ToJSON PrimVal where
 -- (it's the name of the original file plus .tmp at the end)
 -- and then moves it to the specified file path.
 writeStat :: FilePath -> Kv -> IO ()
-writeStat file kv = do
-  B.writeFile tmpFile res
-  S.shelly $ S.mv (fromString tmpFile) (fromString file)
+writeStat file kv = withTempFile (takeDirectory file) (takeFileName file) $ \fileName handle -> do
+  B.hPut handle res
+  hClose handle
+  S.shelly $ S.mv (fromString fileName) (fromString file)
   where
     res = encodePretty defConfig kv
-    tmpFile = tmp file
 
 -- | Creates a process that writes stats with given period.
 writeStatLoop :: NominalDiffTime -> FilePath -> TVar Kv -> IO ()
@@ -75,10 +78,6 @@ writeStatLoop dt file tvStat =
     forever $ do
       writeStat file =<< readTVarIO tvStat
       sleep dt
-
--- | Creates a temporary file name.
-tmp :: FilePath -> FilePath
-tmp x = x ++ ".tmp"
 
 -- | Stop the thread for some time.
 sleep :: NominalDiffTime -> IO ()
