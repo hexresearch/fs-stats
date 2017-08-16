@@ -2,36 +2,51 @@
 
 Библиотека для сохранения статистики в виде KV-пар.
 
-Статистика это набор KV-пар:
+Стаистики представлены закрытым типом `Kv`.
+По сути он хранит набор значений по ключам.
+Сам тип Kv закрыт, мы можем только создать новое пустое значение и сохранять значения в YAML-файл:
 
 ~~~haskell
-newtype Kv = Kv { unKv :: [Metric] }
+newKv :: IO Kv
 
-data Metric = Metric
-  { metricName :: Text
-  , metricData :: PrimVal
-  }
+writeKv :: FilePath -> Kv -> IO ()
 ~~~
 
-Примитивное значение (`PrimVal`) может быть строкой, числом и булевым значением.
-Определны инстансы для `IsString`, `Num`, `Fractional`, `Boolean`.
+### Ссылки Ref
 
-Так метрику можно записать:
+Пользователь может добавлять и обновлять значения через интерфейс ссылок:
+
+Мы можем создавать и удалять поля из KV-значения:
 
 ~~~haskell
-{-# Language OverloadedStrings #-}
-import Data.Boolean
+newRef :: IsPrimVal a => Kv -> Text -> a -> IO (Ref a)
+newRef kv fieldName initValue
 
-stat = Kv [Metric "cpu" 10, Metric "roots" 25, Metric "active" true]
+rmRef :: Kv -> Text -> IO ()
+rmRef kv fieldName
 ~~~
+
+Мы можем записывтаь, читать и обновлять значения по ссылкам:
+
+~~~haskell
+writeRef  :: IsPrimVal a => Ref a -> a -> IO ()
+readRef   :: IsPrimVal a => Ref a -> IO a
+modifyRef :: IsPrimVal a => Ref a -> (a -> a) -> IO ()
+~~~
+
+Все обновления происходят атомарно через STM под капотом.
+
+Обратим внимание на зависимость IsPrimVal. Этот класс содержит примитивные типы.
+Определены инстансы для `Text`, `String`, `Int, `Float`, `Double`, `Bool`, `Scientific`.
+Также мы можем определить свои инстансы (см модуль `Data.Stat.Fs.PrimVal`).
 
 ## Сохранение метрик
 
 Метрики хранятся в виде простого YAML-файла.
-Для сохранения можно воспользоваться функцией `writeStat`:
+Для сохранения можно воспользоваться функцией `writeKv`:
 
 ~~~haskell
-writeStat :: FilePath -> Kv -> IO ()
+writeKv :: FilePath -> Kv -> IO ()
 ~~~
 
 Пример:
@@ -39,11 +54,19 @@ writeStat :: FilePath -> Kv -> IO ()
 Запустим `stack ghci` в проекте `fs-stats`:
 
 ~~~haskell
- > writeStat "stat.yaml" $ Kv [Metric "cpu" 10, Metric "roots" 25, Metric "active" true]
+kv    <- newKv
+count <- newRef kv "count" (0 :: Int)
+flag  <- newRef kv "flag" True
+evt   <- newRef kv "evt" ("on" :: String)
+writeKv "test-stat.yaml" kv
+
+modifyRef count (+1)
+writeRef evt "off"
+writeKv "test-stat.yaml" kv
 ~~~
 
-Отметим, что файл сохраняется не напрямую. а сначала создаётся временный файл с
-тем же именем, но `.tmp` на конце, а затем этот файл переименовывается в файл с заданным именем.
+Отметим, что файл сохраняется не напрямую. а сначала создаётся временный файл,
+а затем этот файл переименовывается в файл с заданным именем.
 
 ### Сохранение метрик в бесконечном цикле
 
@@ -51,25 +74,22 @@ writeStat :: FilePath -> Kv -> IO ()
 Для этого сценария есть функция:
 
 ~~~haskell
-writeStatLoop :: NominalDiffTime -> FilePath -> TVar Kv -> IO ()
-writeStatLoop timeDelta file tvStat
+writeKvLoop :: NominalDiffTime -> FilePath -> Kv -> IO ()
+writeKvLoop timeDelta file kv
 ~~~
 
-Она периодически сохраняет статистику из `TVar` переменной в файл.
+Она периодически сохраняет статистику в файл.
 
 Пример:
 
-Запустим `stack ghci` в проекте `fs-stats`:
+Продолжим пример из предыдущего раздела:
 
 ~~~haskell
-tv <- newTVarIO (Kv [Metric "count" 0])
-writeStatLoop 5 "stat.yaml" tv
+writeKvLoop 5 "test-stat.yaml" kv
 ~~~
 
-Далее мы можем вручную обновить статистику и убедиться, что значения обновились и в файле:
+Далее мы можем обновить статистику и убедиться, что значения обновились и в файле:
 
 ~~~haskell
-import Control.Monad.STM
-
-atomically $ writeTVar tv (Kv [Metric "count" 1])
+writeRef count 7
 ~~~
