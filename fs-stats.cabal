@@ -1,9 +1,9 @@
 name:                fs-stats
 version:             0.1.0.0
--- synopsis:
+synopsis:            Library for saving Key-value metrics to YAML-file
 -- description:
 homepage:            https://github.com/hexresearch/fs-stats#readme
-license:             BSD3
+license:             AllRightsReserved
 license-file:        LICENSE
 author:              HEX Research
 maintainer:          example@example.com
@@ -16,9 +16,13 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Data.Stat.Fs
+                       Data.Stat.Fs.Kv
+                       Data.Stat.Fs.Ref
+                       Data.Stat.Fs.PrimVal
   build-depends:       base >= 4.7 && < 5
                      , Boolean
                      , bytestring
+                     , containers
                      , filepath
                      , immortal
                      , scientific
@@ -33,7 +37,9 @@ library
   default-extensions:
     DeriveDataTypeable
     DeriveGeneric
+    FlexibleInstances
     OverloadedStrings
+    TypeSynonymInstances
 
 test-suite fs-stats-test
   type:                exitcode-stdio-1.0
