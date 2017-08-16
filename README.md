@@ -37,7 +37,7 @@ modifyRef :: IsPrimVal a => Ref a -> (a -> a) -> IO ()
 Все обновления происходят атомарно через STM под капотом.
 
 Обратим внимание на зависимость IsPrimVal. Этот класс содержит примитивные типы.
-Определены инстансы для `Text`, `String`, `Int, `Float`, `Double`, `Bool`, `Scientific`.
+Определены инстансы для `Text`, `String`, `Int`, `Float`, `Double`, `Bool`, `Scientific`.
 Также мы можем определить свои инстансы (см модуль `Data.Stat.Fs.PrimVal`).
 
 ## Сохранение метрик
